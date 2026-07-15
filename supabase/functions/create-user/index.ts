@@ -13,7 +13,9 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { email, password } = await req.json();
+    const body = await req.json();
+    const email = (body.email || "").trim();
+    const password = body.password || "";
 
     if (!email || !password) {
       return new Response(
@@ -28,17 +30,6 @@ Deno.serve(async (req: Request) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Check if user already exists
-    const { data: existing } = await supabaseAdmin.auth.admin.listUsers();
-    const alreadyExists = existing?.users?.some((u) => u.email === email);
-    if (alreadyExists) {
-      return new Response(
-        JSON.stringify({ error: "Este e-mail já está cadastrado." }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Create user without email confirmation
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -46,19 +37,22 @@ Deno.serve(async (req: Request) => {
     });
 
     if (error) {
+      const msg = error.message || "Erro ao criar conta.";
+      const isDuplicate = msg.toLowerCase().includes("already") || msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("exists");
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: isDuplicate ? "Este e-mail já está cadastrado." : msg }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
-      JSON.stringify({ user: { id: data.user.id, email: data.user.email } }),
+      JSON.stringify({ id: data.user.id, email: data.user.email }),
       { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "Erro interno no servidor.";
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : "Erro interno." }),
+      JSON.stringify({ error: msg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

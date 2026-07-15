@@ -81,23 +81,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signUp(email: string, password: string) {
-    // Call the edge function that uses the Admin API to create users without email confirmation
-    const res = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ email, password }),
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ email, password }),
+        }
+      )
+      let json: Record<string, unknown> = {}
+      try { json = await res.json() } catch { /* ignore parse errors */ }
+
+      if (!res.ok) {
+        const msg = typeof json.error === 'string' && json.error ? json.error : 'Erro ao criar conta. Tente novamente.'
+        return { error: msg }
       }
-    )
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      return { error: json.error || 'Erro ao criar conta. Tente novamente.' }
+      return { error: null }
+    } catch {
+      return { error: 'Não foi possível conectar ao servidor. Verifique sua conexão.' }
     }
-    return { error: null }
   }
 
   async function signOut() {
