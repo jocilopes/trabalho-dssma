@@ -1,5 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,21 +23,41 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
+    // Call Supabase Auth Admin API directly via HTTP
+    const res = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${serviceRoleKey}`,
+        "apikey": serviceRoleKey,
+      },
+      body: JSON.stringify({
+        email,
+        password,
+        email_confirm: true,
+      }),
     });
 
-    if (error) {
-      const msg = error.message || "Erro ao criar conta.";
-      const isDuplicate = msg.toLowerCase().includes("already") || msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("exists");
+    const data = await res.json();
+
+    if (!res.ok) {
+      const msg: string =
+        data?.msg ||
+        data?.message ||
+        data?.error_description ||
+        data?.error ||
+        "Erro ao criar conta. Tente novamente.";
+
+      const isDuplicate =
+        typeof msg === "string" &&
+        (msg.toLowerCase().includes("already") ||
+          msg.toLowerCase().includes("duplicate") ||
+          msg.toLowerCase().includes("exists") ||
+          res.status === 422);
+
       return new Response(
         JSON.stringify({ error: isDuplicate ? "Este e-mail já está cadastrado." : msg }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -46,13 +65,12 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ id: data.user.id, email: data.user.email }),
+      JSON.stringify({ id: data.id, email: data.email }),
       { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Erro interno no servidor.";
     return new Response(
-      JSON.stringify({ error: msg }),
+      JSON.stringify({ error: err instanceof Error ? err.message : "Erro interno no servidor." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
