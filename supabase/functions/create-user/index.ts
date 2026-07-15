@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,7 +14,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const email = (body.email || "").trim();
+    const email = (body.email || "").trim().toLowerCase();
     const password = body.password || "";
 
     if (!email || !password) {
@@ -26,7 +27,25 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Call Supabase Auth Admin API directly via HTTP
+    // Check allowlist before creating user
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: allowed } = await supabaseAdmin
+      .from("allowed_emails")
+      .select("email")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({ error: "Este e-mail não está autorizado a se cadastrar. Contate um administrador." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create user via Admin API (direct HTTP call)
     const res = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
       method: "POST",
       headers: {
@@ -49,7 +68,7 @@ Deno.serve(async (req: Request) => {
         data?.message ||
         data?.error_description ||
         data?.error ||
-        "Erro ao criar conta. Tente novamente.";
+        "Erro ao criar conta.";
 
       const isDuplicate =
         typeof msg === "string" &&
