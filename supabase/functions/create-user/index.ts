@@ -1,5 +1,4 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,24 +25,6 @@ Deno.serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    // Check allowlist before creating user
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    const { data: allowed } = await supabaseAdmin
-      .from("allowed_emails")
-      .select("email")
-      .eq("email", email)
-      .maybeSingle();
-
-    if (!allowed) {
-      return new Response(
-        JSON.stringify({ error: "Este e-mail não está autorizado a se cadastrar. Contate um administrador." }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     // Create user via Admin API (direct HTTP call)
     const res = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
