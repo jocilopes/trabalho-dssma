@@ -12,9 +12,46 @@ import Temas from './pages/Temas'
 import Participantes from './pages/Participantes'
 import Setores from './pages/Setores'
 import Relatorios from './pages/Relatorios'
+import Acessos from './pages/Acessos'
+
+function PendingAccess() {
+  const { accessStatus, signOut } = useAuth()
+  const isRejected = accessStatus === 'rejected'
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-neutral-50 p-6">
+      <div className="w-full max-w-md text-center">
+        <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-6 ${isRejected ? 'bg-danger-100' : 'bg-warning-100'}`}>
+          {isRejected ? (
+            <svg className="w-8 h-8 text-danger-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-8 h-8 text-warning-600 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
+        </div>
+        <h2 className="text-2xl font-heading font-bold text-neutral-800 mb-3">
+          {isRejected ? 'Acesso reprovado' : 'Acesso pendente'}
+        </h2>
+        <p className="text-sm text-neutral-500 mb-2 leading-relaxed">
+          {isRejected
+            ? 'Sua solicitação de acesso foi reprovada pelo líder do sistema. Entre em contato para mais informações.'
+            : 'Sua solicitação de acesso foi enviada e está aguardando aprovação do líder do sistema.'}
+        </p>
+        <p className="text-sm text-neutral-400 mb-8">
+          Você receberá acesso assim que for autorizado.
+        </p>
+        <button onClick={() => signOut()} className="btn-secondary w-full">
+          Sair
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function ProtectedApp() {
-  const { session, loading } = useAuth()
+  const { session, loading, accessStatus } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   if (loading) {
@@ -34,6 +71,14 @@ function ProtectedApp() {
     return <Login />
   }
 
+  if (accessStatus === 'pending' || accessStatus === 'rejected') {
+    return <PendingAccess />
+  }
+
+  if (accessStatus !== 'approved') {
+    return null
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-neutral-50">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -50,6 +95,7 @@ function ProtectedApp() {
             <Route path="/participantes" element={<Participantes />} />
             <Route path="/setores" element={<Setores />} />
             <Route path="/relatorios" element={<Relatorios />} />
+            <Route path="/acessos" element={<Acessos />} />
           </Routes>
         </main>
       </div>

@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, MessageSquare, BookOpen, Users, BarChart3, Building2, LogOut, AlertTriangle } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, BookOpen, Users, BarChart3, Building2, LogOut, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 
-const navItems = [
+const baseNavItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/dialogos', label: 'Diálogos', icon: MessageSquare },
   { to: '/temas', label: 'Temas', icon: BookOpen },
@@ -12,9 +12,14 @@ const navItems = [
   { to: '/relatorios', label: 'Relatórios', icon: BarChart3 },
 ]
 
+const leaderNavItems = [
+  { to: '/acessos', label: 'Controle de Acessos', icon: ShieldCheck },
+]
+
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { user, signOut } = useAuth()
+  const { user, signOut, isLeader } = useAuth()
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const navItems = isLeader ? [...baseNavItems, ...leaderNavItems] : baseNavItems
 
   return (
     <>
@@ -39,25 +44,32 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
+          {navItems.map((item, idx) => {
             const Icon = item.icon
+            const isLeaderSection = idx >= baseNavItems.length
             return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/'}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? 'bg-aguia-700 text-white shadow-sm'
-                      : 'text-aguia-200 hover:bg-aguia-800/50 hover:text-white'
-                  }`
-                }
-              >
-                <Icon className="w-4.5 h-4.5 shrink-0" size={18} />
-                {item.label}
-              </NavLink>
+              <div key={item.to}>
+                {isLeaderSection && idx === baseNavItems.length && (
+                  <div className="pt-3 mt-3 border-t border-aguia-800/50">
+                    <p className="px-3 pb-1 text-[10px] text-aguia-500 uppercase tracking-wider font-semibold">Administração</p>
+                  </div>
+                )}
+                <NavLink
+                  to={item.to}
+                  end={item.to === '/'}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 mt-1 ${
+                      isActive
+                        ? 'bg-aguia-700 text-white shadow-sm'
+                        : 'text-aguia-200 hover:bg-aguia-800/50 hover:text-white'
+                    }`
+                  }
+                >
+                  <Icon className="w-4.5 h-4.5 shrink-0" size={18} />
+                  {item.label}
+                </NavLink>
+              </div>
             )
           })}
         </nav>

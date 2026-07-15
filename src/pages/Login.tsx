@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../lib/auth'
-import { ShieldCheck, Mail, Lock, ArrowRight, UserPlus, AlertCircle } from 'lucide-react'
+import { ShieldCheck, Mail, Lock, ArrowRight, UserPlus, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 export default function Login() {
   const { signIn, signUp } = useAuth()
@@ -9,15 +9,56 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [signupSuccess, setSignupSuccess] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
-    const fn = mode === 'login' ? signIn : signUp
-    const { error } = await fn(email, password)
-    if (error) setError(error)
+    if (mode === 'login') {
+      const { error } = await signIn(email, password)
+      if (error) setError(error)
+    } else {
+      const { error } = await signUp(email, password)
+      if (error) {
+        setError(error)
+      } else {
+        setSignupSuccess(true)
+      }
+    }
     setLoading(false)
+  }
+
+  if (signupSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-50 p-6">
+        <div className="w-full max-w-md text-center">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-success-100 flex items-center justify-center mb-6">
+            <CheckCircle2 className="w-8 h-8 text-success-600" />
+          </div>
+          <h2 className="text-2xl font-heading font-bold text-neutral-800 mb-3">
+            Cadastro realizado!
+          </h2>
+          <p className="text-sm text-neutral-500 mb-2 leading-relaxed">
+            Sua solicitação de acesso foi enviada e está <strong>aguardando aprovação</strong> do líder do sistema.
+          </p>
+          <p className="text-sm text-neutral-400 mb-8">
+            Você receberá acesso assim que for autorizado. Tente fazer login novamente em seguida.
+          </p>
+          <button
+            onClick={() => {
+              setSignupSuccess(false)
+              setMode('login')
+              setPassword('')
+            }}
+            className="btn-primary w-full"
+          >
+            Voltar para o login
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -67,12 +108,12 @@ export default function Login() {
 
           <div className="mb-8">
             <h2 className="text-2xl font-heading font-bold text-neutral-800 mb-2">
-              {mode === 'login' ? 'Bem-vindo de volta' : 'Criar conta'}
+              {mode === 'login' ? 'Bem-vindo de volta' : 'Solicitar acesso'}
             </h2>
             <p className="text-sm text-neutral-500">
               {mode === 'login'
                 ? 'Acesse o sistema DSSMA Digital'
-                : 'Cadastre-se para acessar o sistema'}
+                : 'Cadastre-se — sua solicitação será analisada pelo líder'}
             </p>
           </div>
 
@@ -120,7 +161,7 @@ export default function Login() {
                 <span className="animate-pulse">Carregando...</span>
               ) : (
                 <>
-                  {mode === 'login' ? 'Entrar' : 'Cadastrar'}
+                  {mode === 'login' ? 'Entrar' : 'Solicitar acesso'}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -135,7 +176,7 @@ export default function Login() {
               {mode === 'login' ? (
                 <>
                   <UserPlus className="w-4 h-4" />
-                  Não tem conta? Cadastre-se
+                  Não tem conta? Solicite acesso
                 </>
               ) : (
                 'Já tem conta? Fazer login'

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { Bell, Calendar, Users, CheckCircle2, X, Inbox } from 'lucide-react'
+import { useAuth } from '../lib/auth'
+import { Bell, Calendar, Users, CheckCircle2, X, Inbox, ShieldCheck } from 'lucide-react'
 
 type NotifItem = {
   id: string
-  type: 'agendado' | 'pendente'
+  type: 'agendado' | 'pendente' | 'acesso'
   title: string
   subtitle: string
   route: string
@@ -13,6 +14,7 @@ type NotifItem = {
 }
 
 export default function Notifications() {
+  const { isLeader } = useAuth()
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<NotifItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -38,7 +40,7 @@ export default function Notifications() {
     setLoading(true)
     const today = new Date().toISOString().slice(0, 10)
 
-    const [dlgRes, partRes] = await Promise.all([
+    const [dlgRes, partRes, accessRes] = await Promise.all([
       supabase
         .from('dialogos')
         .select('id, titulo, data_realizacao, setor, status')
@@ -51,6 +53,14 @@ export default function Notifications() {
         .select('id, nome, dialogo_id, dialogos ( titulo )')
         .eq('assinatura', false)
         .limit(10),
+      isLeader
+        ? supabase
+            .from('access_requests')
+            .select('id, email, requested_at')
+            .eq('status', 'pendente')
+            .order('requested_at', { ascending: false })
+            .limit(10)
+        : Promise.resolve({ data: null, error: null }),
     ])
 
     const notifs: NotifItem[] = []
@@ -75,6 +85,17 @@ export default function Notifications() {
         subtitle: `Presença pendente · ${dlgTitulo}`,
         route: `/dialogos/${p.dialogo_id}`,
         date: today,
+      })
+    })
+
+    accessRes.data?.forEach((a) => {
+      notifs.push({
+        id: `access-${a.id}`,
+        type: 'acesso',
+        title: a.email,
+        subtitle: 'Solicitação de acesso pendente',
+        route: '/acessos',
+        date: a.requested_at.slice(0, 10),
       })
     })
 
@@ -148,11 +169,13 @@ export default function Notifications() {
                     >
                       <div
                         className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                          item.type === 'agendado' ? 'bg-warning-100' : 'bg-aguia-100'
+                          item.type === 'agendado' ? 'bg-warning-100' : item.type === 'acesso' ? 'bg-danger-100' : 'bg-aguia-100'
                         }`}
                       >
                         {item.type === 'agendado' ? (
                           <Calendar className="w-4 h-4 text-warning-600" />
+                        ) : item.type === 'acesso' ? (
+                          <ShieldCheck className="w-4 h-4 text-danger-600" />
                         ) : (
                           <Users className="w-4 h-4 text-aguia-600" />
                         )}
