@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, MessageSquare, BookOpen, Users, BarChart3, Building2, LogOut } from 'lucide-react'
+import { LayoutDashboard, MessageSquare, BookOpen, Users, BarChart3, Building2, LogOut, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 
 const navItems = [
@@ -13,6 +14,7 @@ const navItems = [
 
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, signOut } = useAuth()
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   return (
     <>
@@ -70,7 +72,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               <p className="text-xs text-aguia-400">Autenticado</p>
             </div>
             <button
-              onClick={() => signOut()}
+              onClick={() => setShowLogoutConfirm(true)}
               className="p-1.5 rounded-lg text-aguia-300 hover:text-white hover:bg-aguia-800/50 transition-colors"
               title="Sair"
             >
@@ -79,6 +81,37 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           </div>
         </div>
       </aside>
+
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-danger-100 flex items-center justify-center mb-4">
+              <AlertTriangle className="w-6 h-6 text-danger-600" />
+            </div>
+            <h2 className="font-heading font-bold text-neutral-800 text-lg mb-1">
+              Sair do sistema?
+            </h2>
+            <p className="text-sm text-neutral-500 mb-6">
+              Você precisará fazer login novamente para acessar o DSSMA Digital.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="btn-secondary flex-1"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => { await signOut(); setShowLogoutConfirm(false) }}
+                className="btn-danger flex-1"
+              >
+                <LogOut className="w-4 h-4" />
+                Sair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
